@@ -1,0 +1,40 @@
+name: One-time import Viet-ERP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/import-viet-erp.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    if: github.repository == 'dathq51232/eggAdmin'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Import exact source revision safely
+        run: |
+          git clone https://github.com/nclamvn/Viet-ERP.git source
+          cd source
+          git checkout 40970cc8847439ab08e7212ce70915afb38c6140
+          test "$(git rev-parse HEAD)" = "40970cc8847439ab08e7212ce70915afb38c6140"
+
+          mkdir -p .github/workflows-disabled
+          cp -a .github/workflows/. .github/workflows-disabled/
+
+          git remote rename origin upstream
+          git remote add target "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          git fetch target main
+          git show FETCH_HEAD:.github/workflows/import-viet-erp.yml > /tmp/import-viet-erp.yml
+
+          rm -rf .github/workflows
+          mkdir -p .github/workflows
+          cp /tmp/import-viet-erp.yml .github/workflows/import-viet-erp.yml
+
+          git config user.name "dathq51232"
+          git config user.email "111370125+dathq51232@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: import Egg Admin with deployment workflows disabled"
+          git push --force-with-lease=refs/heads/main:${{ github.sha }} target HEAD:main

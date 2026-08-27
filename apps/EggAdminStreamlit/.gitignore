@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+data/*.db
+data/*.db-*
+data/backups/
+data/source_images/*
+!data/source_images/.gitkeep

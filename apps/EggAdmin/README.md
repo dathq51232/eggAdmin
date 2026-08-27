@@ -21,6 +21,24 @@
 
 Yêu cầu: Node.js 20+, npm và Docker Desktop.
 
+### Windows — chạy bằng một cú nhấp
+
+1. Cài [Node.js 20+](https://nodejs.org/) và [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+2. Mở Docker Desktop và đợi trạng thái **Ready**.
+3. Nhấp đúp `run.bat` trong thư mục `apps/EggAdmin`.
+
+Lần chạy đầu, chương trình sẽ tự động:
+
+- Tạo `.env` với mật khẩu ngẫu nhiên, không dùng mật khẩu mẫu.
+- Khởi động PostgreSQL bằng Docker.
+- Cài thư viện, tạo bảng dữ liệu và bốn tài khoản theo vai trò.
+- Lưu tài khoản vào `local-credentials.txt` trên máy và tự mở `http://localhost:3030`.
+
+Các lần sau chỉ cần mở Docker Desktop rồi nhấp đúp `run.bat`. Không đưa `.env` hoặc
+`local-credentials.txt` lên GitHub hay gửi công khai.
+
+### Chạy thủ công
+
 ```bash
 cd apps/EggAdmin
 cp .env.example .env

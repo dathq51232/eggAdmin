@@ -1,0 +1,20 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: egg_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: egg_admin
+    ports:
+      - "5434:5432"
+    volumes:
+      - egg_admin_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U egg_admin -d egg_admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  egg_admin_postgres:

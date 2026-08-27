@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COUNTER
+  QC
+  WAREHOUSE
+  VIEWER
+}
+
+enum ReceiptType {
+  FARM_RECEIPT
+  TFP_RECEIPT
+  WAREHOUSE_REQUEST
+}
+
+enum ReceiptStatus {
+  DRAFT
+  PENDING_QC
+  PENDING_WAREHOUSE
+  CONFIRMED
+  REJECTED
+}
+
+enum Area {
+  A
+  C
+  E
+  F
+  TFP
+  NMT
+}
+
+enum StockBucket {
+  RAW
+  FINISHED
+}
+
+enum InventoryTxnType {
+  RECEIPT
+  ISSUE
+  BREAKAGE
+  ADJUSTMENT
+  OPENING
+}
+
+enum ApprovalAction {
+  SUBMIT
+  VERIFY
+  APPROVE
+  REJECT
+}
+
+enum PackagingTxnType {
+  OPENING
+  RECEIPT
+  ISSUE
+  ADJUSTMENT
+}
+
+model User {
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  name                  String
+  passwordHash          String
+  role                   Role
+  active                 Boolean                @default(true)
+  createdAt              DateTime               @default(now())
+  receipts               Receipt[]              @relation("ReceiptCreator")
+  approvals              Approval[]
+  inventoryTransactions InventoryTransaction[]
+  packagingTransactions PackagingTransaction[]
+}
+
+model EggType {
+  id          String                 @id @default(cuid())
+  code        String                 @unique
+  name        String
+  sortOrder   Int
+  eggsPerTree Int                    @default(300)
+  active      Boolean                @default(true)
+  lines       ReceiptLine[]
+  transactions InventoryTransaction[]
+}
+
+model Receipt {
+  id                String            @id @default(cuid())
+  receiptNo         String            @unique
+  sequence          Int
+  receiptDate       DateTime
+  receiptTime       String?
+  type              ReceiptType
+  area              Area
+  stockBucket       StockBucket
+  roundNo           Int               @default(1)
+  lotNumber         String?
+  legalEntity       String?
+  sourceDocumentUrl String?
+  notes             String?
+  status            ReceiptStatus     @default(PENDING_QC)
+  createdById       String
+  createdBy         User              @relation("ReceiptCreator", fields: [createdById], references: [id])
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  lines             ReceiptLine[]
+  approvals         Approval[]
+  transactions      InventoryTransaction[]
+
+  @@unique([receiptDate, type, area, sequence])
+  @@index([receiptDate, status])
+  @@index([area, type])
+}
+
+model ReceiptLine {
+  id           String                @id @default(cuid())
+  receiptId    String
+  eggTypeId    String
+  trees        Int                   @default(0)
+  eggsPerTree  Int                   @default(300)
+  looseEggs    Int                   @default(0)
+  machineEggs  Int                   @default(0)
+  a5Eggs       Int                   @default(0)
+  dirtyEggs    Int                   @default(0)
+  totalEggs    Int
+  receipt      Receipt               @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  eggType      EggType               @relation(fields: [eggTypeId], references: [id])
+  transaction  InventoryTransaction?
+
+  @@unique([receiptId, eggTypeId])
+}
+
+model InventoryTransaction {
+  id              String           @id @default(cuid())
+  transactionDate DateTime         @default(now())
+  type            InventoryTxnType
+  bucket          StockBucket
+  quantity        Int
+  area            Area?
+  lotNumber       String?
+  reference       String?
+  notes           String?
+  eggTypeId       String
+  receiptId       String?
+  receiptLineId   String?          @unique
+  userId          String
+  eggType         EggType          @relation(fields: [eggTypeId], references: [id])
+  receipt         Receipt?         @relation(fields: [receiptId], references: [id])
+  receiptLine     ReceiptLine?     @relation(fields: [receiptLineId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  createdAt       DateTime         @default(now())
+
+  @@index([transactionDate, bucket])
+  @@index([eggTypeId, bucket])
+}
+
+model Approval {
+  id        String         @id @default(cuid())
+  receiptId String
+  action    ApprovalAction
+  comment   String?
+  userId    String
+  receipt   Receipt        @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id])
+  createdAt DateTime       @default(now())
+
+  @@unique([receiptId, action])
+  @@index([createdAt])
+}
+
+model PackagingItem {
+  id           String                 @id @default(cuid())
+  code         String                 @unique
+  name         String
+  unit         String
+  active       Boolean                @default(true)
+  transactions PackagingTransaction[]
+}
+
+model PackagingTransaction {
+  id              String           @id @default(cuid())
+  transactionDate DateTime         @default(now())
+  type            PackagingTxnType
+  quantity        Int
+  reference       String?
+  notes           String?
+  itemId          String
+  userId          String
+  item            PackagingItem    @relation(fields: [itemId], references: [id])
+  user            User             @relation(fields: [userId], references: [id])
+  createdAt       DateTime         @default(now())
+
+  @@index([transactionDate, itemId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  payload    Json?
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
